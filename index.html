@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BagBuilder</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  color: #1e293b;
+}
+body { display: flex; flex-direction: column; }
+
+/* ── Header ── */
+header {
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #1e293b 0%, #2d3f55 100%);
+  color: white;
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.875rem;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  z-index: 10;
+}
+header h1 { font-size: 1.375rem; font-weight: 800; letter-spacing: -0.03em; }
+header .sub { font-size: 0.8125rem; opacity: 0.5; font-weight: 400; }
+
+/* ── App body ── */
+.app-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 210px;
+  flex-shrink: 0;
+  background: white;
+  border-right: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.sidebar-header {
+  padding: 1rem 1rem 0.625rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+.sidebar-bags {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 0.5rem;
+}
+.sidebar-bags::-webkit-scrollbar { width: 4px; }
+.sidebar-bags::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
+
+.sidebar-footer {
+  flex-shrink: 0;
+  padding: 0.75rem;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.sidebar-file-btns {
+  display: flex;
+  gap: 0.375rem;
+}
+.file-btn {
+  flex: 1;
+  padding: 0.375rem 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+  cursor: pointer;
+  color: #475569;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.file-btn:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+.bmc-btn {
+  display: block; text-align: center; text-decoration: none;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.75rem; font-weight: 700;
+  background: #ffdd00; color: #1e293b;
+  border: 1px solid #f0ca00;
+  border-radius: 7px;
+  transition: background 0.15s, transform 0.1s;
+}
+.bmc-btn:hover {
+  background: #ffd000;
+  transform: translateY(-1px);
+}
+
+/* Sidebar bag entry */
+.sbag {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.625rem;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s;
+  position: relative;
+  margin-bottom: 0.25rem;
+  user-select: none;
+}
+.sbag:hover { background: #f8fafc; }
+.sbag.selected { background: #eef2ff; }
+.sbag.selected .sbag-name { color: #4f46e5; }
+.sbag-icon { width: 36px; height: 42px; flex-shrink: 0; }
+.sbag-info { min-width: 0; flex: 1; }
+.sbag-name {
+  font-size: 0.8125rem; font-weight: 600; color: #1e293b;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  line-height: 1.3;
+}
+.sbag-count { font-size: 0.6875rem; color: #94a3b8; line-height: 1.4; }
+.sbag-dot {
+  width: 7px; height: 7px; background: #f97316;
+  border-radius: 50%; flex-shrink: 0;
+}
+
+.add-bag-btn {
+  width: 100%; display: flex; align-items: center; justify-content: center;
+  gap: 0.375rem; padding: 0.5625rem 1rem;
+  background: #6366f1; color: white;
+  border: none; border-radius: 9px; cursor: pointer;
+  font-size: 0.875rem; font-weight: 600; font-family: inherit;
+  transition: background 0.15s, transform 0.1s;
+}
+.add-bag-btn:hover { background: #4f46e5; }
+.add-bag-btn:active { transform: scale(0.98); }
+
+/* ── Main content ── */
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem 2rem;
+  background: #f0f2f5;
+}
+
+/* Empty state */
+.empty-state-main {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; height: 60%;
+  color: #94a3b8; text-align: center; gap: 0.75rem;
+}
+.empty-state-main .big-icon { font-size: 3rem; }
+.empty-state-main p { font-size: 0.9375rem; font-weight: 500; }
+.empty-state-main small { font-size: 0.8125rem; }
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex; align-items: center; gap: 0.375rem;
+  padding: 0.5rem 1rem; border: none; border-radius: 8px;
+  font-size: 0.875rem; font-weight: 500; cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  white-space: nowrap; font-family: inherit;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: #6366f1; color: white; }
+.btn-primary:hover { background: #4f46e5; }
+.btn-danger { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+.btn-danger:hover { background: #fee2e2; }
+.btn-success { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+.btn-success:hover { background: #dcfce7; }
+.btn-sm { padding: 0.3125rem 0.625rem; font-size: 0.8125rem; }
+
+/* ── Bag Detail Card ── */
+.bag-detail {
+  background: white; border-radius: 16px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.07); overflow: hidden;
+}
+
+.detail-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1rem 1.5rem;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid #e2e8f0; gap: 1rem;
+}
+.bag-name-input {
+  font-size: 1.125rem; font-weight: 700; border: none; outline: none;
+  background: transparent; color: #1e293b;
+  border-bottom: 2px solid transparent; padding: 0.1875rem 0.125rem;
+  transition: border-color 0.15s; font-family: inherit;
+  min-width: 80px; max-width: 340px;
+}
+.bag-name-input:focus { border-bottom-color: #6366f1; }
+
+.detail-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+@media (max-width: 760px) { .detail-body { grid-template-columns: 1fr; } }
+
+.detail-col { padding: 1.5rem; }
+.detail-col + .detail-col { border-left: 1px solid #f1f5f9; }
+@media (max-width: 760px) {
+  .detail-col + .detail-col { border-left: none; border-top: 1px solid #f1f5f9; }
+}
+
+.col-title {
+  font-size: 0.6875rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.07em; color: #94a3b8; margin-bottom: 0.875rem;
+}
+
+/* ── Items List (grouped with qty) ── */
+.items-list {
+  display: flex; flex-direction: column; gap: 0.3125rem;
+  max-height: 260px; overflow-y: auto;
+  margin-bottom: 1rem; padding-right: 0.25rem;
+}
+.items-list::-webkit-scrollbar { width: 4px; }
+.items-list::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+.items-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+.item-row {
+  display: flex; align-items: center;
+  padding: 0.375rem 0.5rem 0.375rem 0.625rem;
+  background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 8px; gap: 0.5rem;
+}
+.item-chip {
+  display: flex; align-items: center; gap: 0.4375rem;
+  font-size: 0.875rem; color: #1e293b; flex: 1; min-width: 0;
+}
+.item-chip .lbl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.type-pill {
+  font-size: 0.625rem; padding: 0.125rem 0.3125rem; border-radius: 4px;
+  font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; flex-shrink: 0;
+}
+.tp-str { background: #f1f5f9; color: #64748b; }
+.tp-col { background: #fffbeb; color: #b45309; }
+.tp-num { background: #eff6ff; color: #2563eb; }
+
+.cdot {
+  width: 13px; height: 13px; border-radius: 50%;
+  border: 1px solid rgba(0,0,0,0.12); flex-shrink: 0;
+}
+
+/* Qty controls */
+.qty-controls {
+  display: flex; align-items: center; gap: 0.25rem; flex-shrink: 0;
+}
+.qty-btn {
+  width: 22px; height: 22px; border: 1px solid #e2e8f0; border-radius: 5px;
+  background: white; cursor: pointer; font-size: 0.9375rem; font-weight: 600;
+  line-height: 1; display: flex; align-items: center; justify-content: center;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  color: #64748b; font-family: inherit; flex-shrink: 0;
+}
+.qty-btn:hover { background: #eef2ff; border-color: #6366f1; color: #6366f1; }
+.qty-num {
+  min-width: 26px; text-align: center; font-size: 0.875rem;
+  font-weight: 700; color: #1e293b;
+}
+.del-btn {
+  width: 22px; height: 22px; background: none; border: none;
+  cursor: pointer; color: #cbd5e1; border-radius: 4px;
+  font-size: 0.8125rem; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  transition: color 0.12s, background 0.12s; flex-shrink: 0;
+  margin-left: 0.125rem;
+}
+.del-btn:hover { color: #dc2626; background: #fef2f2; }
+
+.empty-msg {
+  text-align: center; color: #94a3b8; font-size: 0.875rem;
+  padding: 1.25rem 0.5rem; font-style: italic;
+}
+
+/* ── Add Item Form ── */
+.add-form {
+  background: #f8fafc; border: 1px solid #e8edf3; border-radius: 12px; padding: 1rem;
+}
+.add-form-title {
+  font-size: 0.6875rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.07em; color: #94a3b8; margin-bottom: 0.75rem;
+}
+.form-row { display: flex; gap: 0.625rem; align-items: flex-end; flex-wrap: wrap; }
+.form-field { display: flex; flex-direction: column; gap: 0.25rem; }
+.form-field label { font-size: 0.75rem; font-weight: 600; color: #64748b; }
+
+select, input[type="text"], input[type="number"] {
+  padding: 0.4375rem 0.6875rem; border: 1px solid #e2e8f0;
+  border-radius: 7px; font-size: 0.875rem; color: #1e293b;
+  background: white; outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s; font-family: inherit;
+}
+select:focus, input[type="text"]:focus, input[type="number"]:focus {
+  border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+}
+
+/* ── Colour Picker ── */
+.color-picker-wrap { display: flex; flex-direction: column; gap: 0.5rem; flex: 1; }
+.color-swatches { display: flex; flex-wrap: wrap; gap: 0.3125rem; }
+.swatch {
+  width: 22px; height: 22px; border-radius: 50%; cursor: pointer;
+  border: 2px solid transparent;
+  transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+.swatch:hover { transform: scale(1.25); border-color: rgba(0,0,0,0.2); }
+.swatch.active {
+  border-color: #6366f1; transform: scale(1.1);
+  box-shadow: 0 0 0 2px white, 0 0 0 4px #6366f1;
+}
+.sel-color-label {
+  display: flex; align-items: center; gap: 0.375rem;
+  font-size: 0.75rem; color: #64748b;
+}
+
+/* ── Draw Controls ── */
+.draw-controls {
+  display: flex; align-items: center; gap: 0.625rem; flex-wrap: wrap;
+  margin-bottom: 1.25rem; padding: 0.875rem 1rem;
+  background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;
+}
+.draw-controls label { font-size: 0.875rem; font-weight: 600; color: #475569; }
+.draw-lbl { font-size: 0.875rem; color: #64748b; }
+
+/* ── Drawn Items ── */
+.drawn-list {
+  display: flex; flex-direction: column; gap: 0.3125rem;
+  max-height: 200px; overflow-y: auto;
+  margin-bottom: 1rem; padding-right: 0.25rem;
+}
+.drawn-list::-webkit-scrollbar { width: 4px; }
+.drawn-list::-webkit-scrollbar-thumb { background: #fde68a; border-radius: 4px; }
+.drawn-item {
+  display: flex; align-items: center; gap: 0.4375rem;
+  padding: 0.375rem 0.625rem; background: #fffbeb;
+  border: 1px solid #fde68a; border-radius: 7px; font-size: 0.8125rem;
+}
+.draw-num {
+  font-size: 0.6875rem; font-weight: 700; color: #d97706;
+  min-width: 1.75rem; flex-shrink: 0; font-variant-numeric: tabular-nums;
+}
+.return-btn {
+  margin-left: auto; flex-shrink: 0;
+  background: none; border: 1px solid #fde68a; border-radius: 5px;
+  color: #d97706; font-size: 0.75rem; line-height: 1;
+  padding: 0.1875rem 0.375rem; cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  title: "Return to bag";
+}
+.return-btn:hover {
+  background: #d97706; border-color: #d97706; color: white;
+}
+
+/* ── Totals ── */
+.totals-box {
+  background: #f8fafc; border: 1px solid #e2e8f0;
+  border-radius: 10px; padding: 0.875rem;
+}
+.totals-title {
+  font-size: 0.6875rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.07em; color: #94a3b8; margin-bottom: 0.625rem;
+}
+.total-row {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.375rem 0; font-size: 0.875rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+.total-row:last-child { border-bottom: none; }
+.total-count {
+  margin-left: auto; font-weight: 700; color: #6366f1;
+  font-size: 0.9375rem; min-width: 2.5rem; text-align: right;
+}
+.nums-detail { color: #94a3b8; font-size: 0.8125rem; flex: 1; }
+.num-sum { color: #1e293b; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>BagBuilder</h1>
+  <span class="sub">A free game design tool for simulating random bag draws</span>
+</header>
+
+<div class="app-body">
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+    <div class="sidebar-header">Bags</div>
+    <div id="sidebar-bags" class="sidebar-bags"></div>
+    <div class="sidebar-footer">
+      <button class="add-bag-btn" onclick="createBag()">＋ New Bag</button>
+      <div class="sidebar-file-btns">
+        <button class="file-btn" onclick="exportJSON()" title="Save all bags to a .json file">💾 Save file</button>
+        <button class="file-btn" onclick="importJSON()" title="Load bags from a .json file">📂 Load file</button>
+      </div>
+      <a class="bmc-btn" href="https://buymeacoffee.com/hauntpun" target="_blank" rel="noopener noreferrer">
+        ☕ Buy me a coffee
+      </a>
+    </div>
+  </aside>
+
+  <!-- ── Main ── -->
+  <main class="main-content" id="main-content">
+    <div class="empty-state-main">
+      <span class="big-icon">🎒</span>
+      <p>No bag selected</p>
+      <small>Create a new bag or select one from the sidebar</small>
+    </div>
+  </main>
+</div>
+
+<script>
+// ── Constants ──────────────────────────────────────────────────────────────
+
+const BAG_COLORS = [
+  '#6366f1','#f97316','#22c55e','#e74c3c',
+  '#14b8a6','#3b82f6','#a855f7','#ec4899',
+  '#eab308','#10b981','#f43f5e','#0ea5e9'
+];
+
+const COLORS = [
+  { name:'Red',    hex:'#ef4444' },
+  { name:'Orange', hex:'#f97316' },
+  { name:'Yellow', hex:'#eab308' },
+  { name:'Lime',   hex:'#84cc16' },
+  { name:'Green',  hex:'#22c55e' },
+  { name:'Teal',   hex:'#14b8a6' },
+  { name:'Cyan',   hex:'#06b6d4' },
+  { name:'Blue',   hex:'#3b82f6' },
+  { name:'Indigo', hex:'#6366f1' },
+  { name:'Violet', hex:'#8b5cf6' },
+  { name:'Purple', hex:'#a855f7' },
+  { name:'Pink',   hex:'#ec4899' },
+  { name:'Brown',  hex:'#a16207' },
+  { name:'Black',  hex:'#0f172a' },
+  { name:'Gray',   hex:'#64748b' },
+  { name:'Silver', hex:'#cbd5e1' },
+  { name:'White',  hex:'#f1f5f9' },
+];
+
+// ── State ──────────────────────────────────────────────────────────────────
+// Each bag.items entry: { id, type, value, qty }
+// Each bag.drawn entry: { id, type, value }  (individual, no qty)
+
+let bags = [];
+let selectedBagId = null;
+let nextBagId = 1;
+let nextItemId = 1;
+let selectedColorIdx = 0;
+let drawCounter = 0;
+
+const STORAGE_KEY = 'bagBuilder_v1';
+
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(
+      { bags, selectedBagId, nextBagId, nextItemId, drawCounter }
+    ));
+  } catch(e) {
+    console.warn('BagBuilder: could not save state —', e);
+  }
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const s = JSON.parse(raw);
+    if (!Array.isArray(s.bags) || s.bags.length === 0) return false;
+    bags          = s.bags;
+    selectedBagId = s.selectedBagId ?? null;
+    nextBagId     = s.nextBagId     ?? bags.reduce((m,b) => Math.max(m,b.id),0) + 1;
+    nextItemId    = s.nextItemId    ?? 1;
+    drawCounter   = s.drawCounter   ?? 0;
+    return true;
+  } catch(e) {
+    console.warn('BagBuilder: could not load state —', e);
+    return false;
+  }
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+
+function totalQty(bag) {
+  return bag.items.reduce((s, i) => s + i.qty, 0);
+}
+
+// Returns true if a grouped item entry matches a plain item {type, value}
+function itemsMatch(grouped, plain) {
+  if (grouped.type !== plain.type) return false;
+  if (grouped.type === 'string')  return grouped.value === plain.value;
+  if (grouped.type === 'color')   return grouped.value.name === plain.value.name;
+  if (grouped.type === 'number')  return grouped.value === plain.value;
+  return false;
+}
+
+// ── Mutations ──────────────────────────────────────────────────────────────
+
+function createBag() {
+  const bag = {
+    id: nextBagId++,
+    name: `Bag ${bags.length + 1}`,
+    color: BAG_COLORS[bags.length % BAG_COLORS.length],
+    items: [],   // grouped: { id, type, value, qty }
+    drawn: []    // individual: { id, type, value }
+  };
+  bags.push(bag);
+  selectedBagId = bag.id;
+  render();
+}
+
+function deleteBag(id) {
+  if (!confirm('Delete this bag and all its contents?')) return;
+  bags = bags.filter(b => b.id !== id);
+  if (selectedBagId === id) selectedBagId = null;
+  render();
+}
+
+function selectBag(id) {
+  selectedBagId = id;
+  render();
+}
+
+function updateBagName(id, name) {
+  const bag = bags.find(b => b.id === id);
+  if (bag) {
+    bag.name = name;
+    saveState();
+    // Patch sidebar name without full re-render
+    const el = document.querySelector(`[data-sbag="${id}"] .sbag-name`);
+    if (el) el.textContent = name;
+  }
+}
+
+function addItem(bagId) {
+  const bag = bags.find(b => b.id === bagId);
+  if (!bag) return;
+
+  const typeEl = document.getElementById('new-type');
+  const type = typeEl ? typeEl.value : 'string';
+
+  let value;
+  let refocus = null;
+
+  if (type === 'string') {
+    const el = document.getElementById('new-text');
+    if (!el) return;
+    value = el.value.trim();
+    if (!value) { el.focus(); return; }
+    el.value = '';   // clear so the next object name is a fresh entry
+    refocus = 'new-text';
+  } else if (type === 'color') {
+    value = { ...COLORS[selectedColorIdx] };
+  } else {
+    const el = document.getElementById('new-num');
+    if (!el) return;
+    const n = parseInt(el.value, 10);
+    if (isNaN(n) || n < -99 || n > 99) { el.focus(); el.select(); return; }
+    value = n;
+  }
+
+  // Group: find existing entry of same type+value, increment qty; else push new
+  const existing = bag.items.find(i => itemsMatch(i, { type, value }));
+  if (existing) {
+    existing.qty++;
+  } else {
+    bag.items.push({ id: nextItemId++, type, value, qty: 1 });
+  }
+
+  render();
+  if (refocus) document.getElementById(refocus)?.focus();
+}
+
+function incrementItem(bagId, itemId) {
+  const bag = bags.find(b => b.id === bagId);
+  if (!bag) return;
+  const item = bag.items.find(i => i.id === itemId);
+  if (item) { item.qty++; render(); }
+}
+
+function decrementItem(bagId, itemId) {
+  const bag = bags.find(b => b.id === bagId);
+  if (!bag) return;
+  const item = bag.items.find(i => i.id === itemId);
+  if (!item) return;
+  item.qty--;
+  if (item.qty <= 0) bag.items = bag.items.filter(i => i.id !== itemId);
+  render();
+}
+
+function deleteItem(bagId, itemId) {
+  const bag = bags.find(b => b.id === bagId);
+  if (!bag) return;
+  bag.items = bag.items.filter(i => i.id !== itemId);
+  render();
+}
+
+function drawItems(bagId) {
+  const bag = bags.find(b => b.id === bagId);
+  if (!bag) return;
+
+  const el = document.getElementById('draw-count');
+  const n = parseInt(el ? el.value : '1', 10);
+  if (isNaN(n) || n < 1) return;
+
+  const available = totalQty(bag);
+  if (available === 0) {
+    alert('The bag is empty! Add some items first.');
+    return;
+  }
+
+  const drawN = Math.min(n, available);
+  for (let i = 0; i < drawN; i++) {
+    const total = totalQty(bag);
+    let rand = Math.floor(Math.random() * total);
+    for (const item of bag.items) {
+      if (rand < item.qty) {
+        // Draw this item
+        bag.drawn.push({ id: nextItemId++, type: item.type,
+          value: item.type === 'color' ? { ...item.value } : item.value,
+          drawNum: ++drawCounter });
+        item.qty--;
+        if (item.qty <= 0) bag.items = bag.items.filter(x => x.id !== item.id);
+        break;
+      }
+      rand -= item.qty;
+    }
+  }
+  render();
+}
+
+function resetBag(bagId) {
+  const bag = bags.find(b => b.id === bagId);
+  if (!bag) return;
+  // Re-aggregate drawn items back into grouped items
+  for (const drawnItem of bag.drawn) {
+    const existing = bag.items.find(i => itemsMatch(i, drawnItem));
+    if (existing) {
+      existing.qty++;
+    } else {
+      bag.items.push({ id: nextItemId++, type: drawnItem.type, value: drawnItem.value, qty: 1 });
+    }
+  }
+  bag.drawn = [];
+  drawCounter = 0;
+  render();
+}
+
+function returnItem(bagId, drawnId) {
+  const bag = bags.find(b => b.id === bagId);
+  if (!bag) return;
+  const idx = bag.drawn.findIndex(d => d.id === drawnId);
+  if (idx === -1) return;
+  const [drawnItem] = bag.drawn.splice(idx, 1);
+  // Merge back into grouped bag items
+  const existing = bag.items.find(i => itemsMatch(i, drawnItem));
+  if (existing) {
+    existing.qty++;
+  } else {
+    bag.items.push({ id: nextItemId++, type: drawnItem.type, value: drawnItem.value, qty: 1 });
+  }
+  render();
+}
+
+function selectColor(idx) {
+  selectedColorIdx = idx;
+  document.querySelectorAll('.swatch').forEach((el, i) => el.classList.toggle('active', i === idx));
+  const lbl = document.getElementById('sel-color-name');
+  const dot = document.getElementById('sel-color-dot');
+  if (lbl) lbl.textContent = COLORS[idx].name;
+  if (dot) dot.style.background = COLORS[idx].hex;
+}
+
+function changeType() { render(); }
+
+// ── SVG helpers ────────────────────────────────────────────────────────────
+
+function bagSVG(color, w, h, empty) {
+  const vbW = 60, vbH = 72;
+  const op = empty ? '0.38' : '1';
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${vbW} ${vbH}" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity:${op}">
+    <path d="M21 26 Q21 9 30 9 Q39 9 39 26" stroke="${color}" stroke-width="3.5" stroke-linecap="round"/>
+    <rect x="8" y="24" width="44" height="42" rx="9" fill="${color}" opacity="0.13"/>
+    <rect x="8" y="24" width="44" height="42" rx="9" stroke="${color}" stroke-width="2"/>
+    <path d="M8 32 Q8 24 17 24 L43 24 Q52 24 52 32" fill="${color}" opacity="0.22"/>
+    <line x1="8" y1="32" x2="52" y2="32" stroke="${color}" stroke-width="1.5" opacity="0.35"/>
+    <path d="M16 38 Q14 52 16 60" stroke="${color}" stroke-width="2" opacity="0.18" stroke-linecap="round"/>
+  </svg>`;
+}
+
+function chipHTML(item) {
+  if (item.type === 'string') {
+    return `<span class="type-pill tp-str">obj</span><span class="lbl">${esc(item.value)}</span>`;
+  } else if (item.type === 'color') {
+    return `<span class="type-pill tp-col">colour</span>
+            <span class="cdot" style="background:${item.value.hex}"></span>
+            <span class="lbl">${esc(item.value.name)}</span>`;
+  } else {
+    return `<span class="type-pill tp-num">num</span><span class="lbl">${item.value}</span>`;
+  }
+}
+
+// ── Render Sidebar ─────────────────────────────────────────────────────────
+
+function renderSidebar() {
+  const el = document.getElementById('sidebar-bags');
+  if (bags.length === 0) {
+    el.innerHTML = `<div style="padding:1rem 0.5rem;font-size:0.8125rem;color:#94a3b8;font-style:italic;">No bags yet</div>`;
+    return;
+  }
+  el.innerHTML = bags.map(bag => {
+    const qty = totalQty(bag);
+    const sel = bag.id === selectedBagId;
+    const hasDrawn = bag.drawn.length > 0;
+    return `<div class="sbag${sel ? ' selected' : ''}" data-sbag="${bag.id}" onclick="selectBag(${bag.id})">
+      ${bagSVG(bag.color, 36, 42, qty === 0 && !hasDrawn)}
+      <div class="sbag-info">
+        <div class="sbag-name">${esc(bag.name)}</div>
+        <div class="sbag-count">${qty} in bag${hasDrawn ? ' · ' + bag.drawn.length + ' drawn' : ''}</div>
+      </div>
+      ${hasDrawn ? '<div class="sbag-dot" title="Has drawn items"></div>' : ''}
+    </div>`;
+  }).join('');
+}
+
+// ── Render Main ────────────────────────────────────────────────────────────
+
+function renderMain() {
+  const el = document.getElementById('main-content');
+
+  if (!selectedBagId) {
+    el.innerHTML = `<div class="empty-state-main">
+      <span class="big-icon">🎒</span>
+      <p>No bag selected</p>
+      <small>Create a new bag or select one from the sidebar</small>
+    </div>`;
+    return;
+  }
+
+  const bag = bags.find(b => b.id === selectedBagId);
+  if (!bag) {
+    el.innerHTML = '';
+    return;
+  }
+
+  // Preserve transient form state
+  const curType       = document.getElementById('new-type')?.value    || 'string';
+  const curDrawCount  = document.getElementById('draw-count')?.value  || '1';
+  const curNumValue   = document.getElementById('new-num')?.value     || '1';
+  const curTextValue  = document.getElementById('new-text')?.value    || '';
+
+  // ── Items list (grouped)
+  const qty = totalQty(bag);
+  const itemsHTML = bag.items.length === 0
+    ? '<div class="empty-msg">No items yet — add some below!</div>'
+    : bag.items.map(item => `
+        <div class="item-row">
+          <div class="item-chip">${chipHTML(item)}</div>
+          <div class="qty-controls">
+            <button class="qty-btn" onclick="decrementItem(${bag.id},${item.id})" title="Remove one">−</button>
+            <span class="qty-num">${item.qty}</span>
+            <button class="qty-btn" onclick="incrementItem(${bag.id},${item.id})" title="Add one">+</button>
+            <button class="del-btn" onclick="deleteItem(${bag.id},${item.id})" title="Delete all of this type">✕</button>
+          </div>
+        </div>`).join('');
+
+  // ── Value input
+  let valInput = '';
+  if (curType === 'string') {
+    valInput = `<div class="form-field">
+      <label>Object name</label>
+      <input type="text" id="new-text" value="${esc(curTextValue)}" placeholder="e.g. sheep" style="width:145px"
+        onkeydown="if(event.key==='Enter') addItem(${bag.id})">
+    </div>`;
+  } else if (curType === 'color') {
+    const swatches = COLORS.map((c,i) =>
+      `<div class="swatch${i===selectedColorIdx?' active':''}"
+           style="background:${c.hex}${c.hex==='#f1f5f9'?';border:1px solid #cbd5e1':''}"
+           title="${c.name}" onclick="selectColor(${i})"></div>`
+    ).join('');
+    valInput = `<div class="color-picker-wrap form-field">
+      <label>Colour</label>
+      <div class="color-swatches">${swatches}</div>
+      <div class="sel-color-label">
+        <span class="cdot" id="sel-color-dot" style="background:${COLORS[selectedColorIdx].hex};width:12px;height:12px"></span>
+        <span id="sel-color-name">${COLORS[selectedColorIdx].name}</span>
+      </div>
+    </div>`;
+  } else {
+    valInput = `<div class="form-field">
+      <label>Number (−99 to 99)</label>
+      <input type="number" id="new-num" value="${esc(curNumValue)}" min="-99" max="99" step="1" style="width:100px"
+        onkeydown="if(event.key==='Enter') addItem(${bag.id})">
+    </div>`;
+  }
+
+  // ── Drawn items
+  const drawnHTML = bag.drawn.length === 0
+    ? '<div class="empty-msg">No items drawn yet.</div>'
+    : bag.drawn.map(item =>
+        `<div class="drawn-item">
+          <span class="draw-num">#${item.drawNum}</span>
+          ${chipHTML(item)}
+          <button class="return-btn" onclick="returnItem(${bag.id},${item.id})" title="Return to bag">↩</button>
+        </div>`
+      ).join('');
+
+  const drawLbl = parseInt(curDrawCount) === 1 ? 'item' : 'items';
+
+  el.innerHTML = `
+    <div class="bag-detail">
+      <div class="detail-header">
+        <input class="bag-name-input" type="text" value="${esc(bag.name)}"
+          oninput="updateBagName(${bag.id},this.value)"
+          placeholder="Bag name" spellcheck="false">
+        <button class="btn btn-danger btn-sm" onclick="deleteBag(${bag.id})">Delete Bag</button>
+      </div>
+
+      <div class="detail-body">
+
+        <!-- ── Left: Contents ── -->
+        <div class="detail-col">
+          <div class="col-title">Contents &mdash; ${qty} item${qty !== 1 ? 's' : ''}</div>
+          <div class="items-list">${itemsHTML}</div>
+
+          <div class="add-form">
+            <div class="add-form-title">Add Item</div>
+            <div class="form-row" style="margin-bottom:0.75rem">
+              <div class="form-field">
+                <label>Type</label>
+                <select id="new-type" onchange="changeType()">
+                  <option value="string" ${curType==='string'?'selected':''}>Object</option>
+                  <option value="color"  ${curType==='color' ?'selected':''}>Colour</option>
+                  <option value="number" ${curType==='number'?'selected':''}>Number</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              ${valInput}
+              <div class="form-field" style="margin-top:${curType==='color'?'0.5rem':'1.25rem'}">
+                <button class="btn btn-primary" onclick="addItem(${bag.id})">Add</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Right: Draw & Results ── -->
+        <div class="detail-col">
+          <div class="col-title">Draw &amp; Results</div>
+
+          <div class="draw-controls">
+            <label>Draw</label>
+            <input type="number" id="draw-count" value="${esc(curDrawCount)}" min="1"
+              style="width:68px;text-align:center"
+              oninput="document.getElementById('draw-lbl').textContent=this.value==1?'item':'items'">
+            <span class="draw-lbl" id="draw-lbl">${drawLbl}</span>
+            <button class="btn btn-primary" onclick="drawItems(${bag.id})">Draw!</button>
+            ${bag.drawn.length > 0
+              ? `<button class="btn btn-success" onclick="resetBag(${bag.id})" title="Return all drawn items to the bag">↩ Reset</button>`
+              : ''}
+          </div>
+
+          <div class="col-title">Drawn Items &mdash; ${bag.drawn.length}</div>
+          <div class="drawn-list">${drawnHTML}</div>
+
+          ${bag.drawn.length > 0 ? `
+            <div class="totals-box">
+              <div class="totals-title">Totals</div>
+              ${buildTotals(bag.drawn)}
+            </div>` : ''}
+        </div>
+
+      </div>
+    </div>`;
+}
+
+// ── Totals ─────────────────────────────────────────────────────────────────
+
+function buildTotals(drawnItems) {
+  const strings = {};
+  const colors  = {};
+  const nums    = [];
+
+  for (const item of drawnItems) {
+    if (item.type === 'string') {
+      strings[item.value] = (strings[item.value] || 0) + 1;
+    } else if (item.type === 'color') {
+      const k = item.value.name;
+      if (!colors[k]) colors[k] = { hex: item.value.hex, count: 0 };
+      colors[k].count++;
+    } else {
+      nums.push(item.value);
+    }
+  }
+
+  let html = '';
+
+  for (const [text, count] of Object.entries(strings).sort((a,b) => b[1]-a[1])) {
+    html += `<div class="total-row">
+      <span class="type-pill tp-str">obj</span>
+      <span>${esc(text)}</span>
+      <span class="total-count">×${count}</span>
+    </div>`;
+  }
+
+  for (const [name, d] of Object.entries(colors).sort((a,b) => b[1].count-a[1].count)) {
+    html += `<div class="total-row">
+      <span class="type-pill tp-col">colour</span>
+      <span class="cdot" style="background:${d.hex}"></span>
+      <span>${esc(name)}</span>
+      <span class="total-count">×${d.count}</span>
+    </div>`;
+  }
+
+  if (nums.length > 0) {
+    const sum = nums.reduce((a,b) => a+b, 0);
+    html += `<div class="total-row">
+      <span class="type-pill tp-num">num</span>
+      <span class="nums-detail">${nums.join(', ')}</span>
+      <span class="total-count num-sum">= ${sum}</span>
+    </div>`;
+  }
+
+  return html;
+}
+
+// ── Save / Load JSON file ──────────────────────────────────────────────────
+
+function exportJSON() {
+  const state = { bags, selectedBagId, nextBagId, nextItemId, drawCounter };
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const d = new Date();
+  const stamp = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+  a.download = `bagbuilder_${stamp}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function importJSON() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json,application/json';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const s = JSON.parse(ev.target.result);
+        if (!Array.isArray(s.bags)) throw new Error('Missing bags array — is this a BagBuilder file?');
+        bags         = s.bags;
+        selectedBagId = s.selectedBagId ?? (s.bags[0]?.id ?? null);
+        nextBagId    = s.nextBagId    ?? s.bags.reduce((m,b) => Math.max(m,b.id), 0) + 1;
+        nextItemId   = s.nextItemId   ?? 1;
+        drawCounter  = s.drawCounter  ?? 0;
+        render();
+      } catch(err) {
+        alert('Could not load file:\n' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+// ── Main Render ────────────────────────────────────────────────────────────
+
+function render() {
+  renderSidebar();
+  renderMain();
+  saveState();
+}
+
+// Restore saved session or create a default empty bag
+(function init() {
+  if (!loadState()) {
+    const bag = {
+      id: nextBagId++,
+      name: 'Bag 1',
+      color: BAG_COLORS[0],
+      items: [],
+      drawn: []
+    };
+    bags.push(bag);
+    selectedBagId = bag.id;
+  }
+  render();
+})();
+</script>
+</body>
+</html>
