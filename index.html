@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BagBuilder</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎒</text></svg>">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -267,10 +268,20 @@ header .sub { font-size: 0.8125rem; opacity: 0.5; font-weight: 400; }
   color: #64748b; font-family: inherit; flex-shrink: 0;
 }
 .qty-btn:hover { background: #eef2ff; border-color: #6366f1; color: #6366f1; }
-.qty-num {
-  min-width: 26px; text-align: center; font-size: 0.875rem;
-  font-weight: 700; color: #1e293b;
+.qty-input {
+  width: 52px; text-align: center; font-size: 0.875rem;
+  font-weight: 700; color: #1e293b; font-family: inherit;
+  border: 1px solid transparent; border-radius: 5px;
+  background: transparent; padding: 0 0.1875rem;
+  line-height: 1.4;
+  transition: border-color 0.15s, background 0.15s;
+  -moz-appearance: textfield;
 }
+.qty-input::-webkit-outer-spin-button,
+.qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.qty-input:hover { border-color: #e2e8f0; background: white; }
+.qty-input:focus { border-color: #6366f1; background: white;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.1); outline: none; }
 .del-btn {
   width: 22px; height: 22px; background: none; border: none;
   cursor: pointer; color: #cbd5e1; border-radius: 4px;
@@ -335,6 +346,39 @@ select:focus, input[type="text"]:focus, input[type="number"]:focus {
 .draw-controls label { font-size: 0.875rem; font-weight: 600; color: #475569; }
 .draw-lbl { font-size: 0.875rem; color: #64748b; }
 
+/* ── Auto-refill toggle ── */
+.toggle-wrap {
+  display: flex; align-items: center; gap: 0.4375rem;
+  font-size: 0.8125rem; color: #64748b; cursor: pointer;
+  user-select: none; white-space: nowrap; margin-left: 0.25rem;
+}
+.toggle-wrap input[type="checkbox"] { display: none; }
+.toggle-track {
+  width: 34px; height: 19px; border-radius: 10px;
+  background: #cbd5e1; position: relative; flex-shrink: 0;
+  transition: background 0.2s;
+}
+.toggle-wrap input:checked + .toggle-track { background: #6366f1; }
+.toggle-thumb {
+  position: absolute; top: 2px; left: 2px;
+  width: 15px; height: 15px; border-radius: 50%;
+  background: white; transition: left 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+}
+.toggle-wrap input:checked + .toggle-track .toggle-thumb { left: 17px; }
+
+/* ── Refill flash ── */
+.refill-flash {
+  font-size: 0.8125rem; font-weight: 700; color: #16a34a;
+  animation: refill-fade 2.2s ease forwards; pointer-events: none;
+}
+@keyframes refill-fade {
+  0%   { opacity: 0; transform: translateY(-4px); }
+  15%  { opacity: 1; transform: translateY(0); }
+  70%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 /* ── Drawn Items ── */
 .drawn-list {
   display: flex; flex-direction: column; gap: 0.3125rem;
@@ -385,18 +429,84 @@ select:focus, input[type="text"]:focus, input[type="number"]:focus {
 }
 .nums-detail { color: #94a3b8; font-size: 0.8125rem; flex: 1; }
 .num-sum { color: #1e293b; font-weight: 700; }
+
+/* ── Mobile ─────────────────────────────────────────────────────────────── */
+
+.menu-btn {
+  display: none;
+  background: none; border: none; cursor: pointer;
+  color: white; padding: 0.3125rem; margin-right: 0.25rem;
+  border-radius: 7px; flex-shrink: 0; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+.menu-btn:hover { background: rgba(255,255,255,0.12); }
+.menu-btn svg { display: block; }
+
+.sidebar-overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 150;
+  background: rgba(15,23,42,0.45);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+.sidebar-overlay.open { display: block; }
+
+@media (max-width: 640px) {
+
+  /* Show hamburger, tighten header */
+  .menu-btn { display: flex; }
+  header { padding: 0.75rem 1rem; gap: 0.5rem; align-items: center; }
+  header .sub { display: none; }
+
+  /* Sidebar slides in over content */
+  .sidebar {
+    position: fixed;
+    left: 0; top: 0;
+    height: 100%;
+    z-index: 200;
+    transform: translateX(-100%);
+    transition: transform 0.26s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .sidebar.open {
+    transform: translateX(0);
+    box-shadow: 6px 0 32px rgba(0,0,0,0.18);
+  }
+
+  /* Main area: reduced padding */
+  .main-content { padding: 0.875rem; }
+
+  /* Card cols stack; remove fixed max-heights so page scrolls naturally */
+  .detail-col { padding: 1rem; }
+  .items-list  { max-height: none; }
+  .drawn-list  { max-height: none; }
+
+  /* Bag name input — don't overflow small screens */
+  .bag-name-input { max-width: 55vw; font-size: 1rem; }
+
+  /* Draw controls wrap nicely */
+  .draw-controls { gap: 0.5rem; }
+}
 </style>
 </head>
 <body>
 
 <header>
+  <button class="menu-btn" onclick="toggleSidebar()" aria-label="Toggle bag list">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="3" y1="6"  x2="21" y2="6"/>
+      <line x1="3" y1="12" x2="21" y2="12"/>
+      <line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+  </button>
   <h1>BagBuilder</h1>
   <span class="sub">A free game design tool for simulating random bag draws</span>
 </header>
 
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
 <div class="app-body">
   <!-- ── Sidebar ── -->
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">Bags</div>
     <div id="sidebar-bags" class="sidebar-bags"></div>
     <div class="sidebar-footer">
@@ -460,13 +570,14 @@ let nextBagId = 1;
 let nextItemId = 1;
 let selectedColorIdx = 0;
 let drawCounter = 0;
+let autoRefill = false;
 
 const STORAGE_KEY = 'bagBuilder_v1';
 
 function saveState() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(
-      { bags, selectedBagId, nextBagId, nextItemId, drawCounter }
+      { bags, selectedBagId, nextBagId, nextItemId, drawCounter, autoRefill }
     ));
   } catch(e) {
     console.warn('BagBuilder: could not save state —', e);
@@ -484,6 +595,7 @@ function loadState() {
     nextBagId     = s.nextBagId     ?? bags.reduce((m,b) => Math.max(m,b.id),0) + 1;
     nextItemId    = s.nextItemId    ?? 1;
     drawCounter   = s.drawCounter   ?? 0;
+    autoRefill    = s.autoRefill    ?? false;
     return true;
   } catch(e) {
     console.warn('BagBuilder: could not load state —', e);
@@ -536,7 +648,21 @@ function deleteBag(id) {
 
 function selectBag(id) {
   selectedBagId = id;
+  closeSidebar();
   render();
+}
+
+function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  const opening = !sidebar.classList.contains('open');
+  sidebar.classList.toggle('open', opening);
+  overlay.classList.toggle('open', opening);
+}
+
+function closeSidebar() {
+  document.getElementById('sidebar')?.classList.remove('open');
+  document.getElementById('sidebar-overlay')?.classList.remove('open');
 }
 
 function updateBagName(id, name) {
@@ -606,11 +732,51 @@ function decrementItem(bagId, itemId) {
   render();
 }
 
+function setItemQty(bagId, itemId, raw) {
+  const bag = bags.find(b => b.id === bagId);
+  if (!bag) return;
+  const item = bag.items.find(i => i.id === itemId);
+  if (!item) return;
+  const n = Math.min(999, parseInt(raw, 10));
+  if (isNaN(n) || n < 1) { render(); return; } // revert if invalid
+  item.qty = n;
+  render();
+}
+
 function deleteItem(bagId, itemId) {
   const bag = bags.find(b => b.id === bagId);
   if (!bag) return;
   bag.items = bag.items.filter(i => i.id !== itemId);
   render();
+}
+
+// Silently refill bag from drawn items (preserves drawCounter)
+function doRefillBag(bag) {
+  for (const drawnItem of bag.drawn) {
+    const existing = bag.items.find(i => itemsMatch(i, drawnItem));
+    if (existing) {
+      existing.qty++;
+    } else {
+      bag.items.push({ id: nextItemId++, type: drawnItem.type, value: drawnItem.value, qty: 1 });
+    }
+  }
+  bag.drawn = [];
+}
+
+function drawOneFrom(bag) {
+  const total = totalQty(bag);
+  let rand = Math.floor(Math.random() * total);
+  for (const item of bag.items) {
+    if (rand < item.qty) {
+      bag.drawn.push({ id: nextItemId++, type: item.type,
+        value: item.type === 'color' ? { ...item.value } : item.value,
+        drawNum: ++drawCounter });
+      item.qty--;
+      if (item.qty <= 0) bag.items = bag.items.filter(x => x.id !== item.id);
+      return;
+    }
+    rand -= item.qty;
+  }
 }
 
 function drawItems(bagId) {
@@ -621,30 +787,49 @@ function drawItems(bagId) {
   const n = parseInt(el ? el.value : '1', 10);
   if (isNaN(n) || n < 1) return;
 
-  const available = totalQty(bag);
-  if (available === 0) {
+  // Truly empty — nothing in bag and nothing drawn to refill from
+  if (totalQty(bag) === 0 && bag.drawn.length === 0) {
     alert('The bag is empty! Add some items first.');
     return;
   }
 
-  const drawN = Math.min(n, available);
-  for (let i = 0; i < drawN; i++) {
-    const total = totalQty(bag);
-    let rand = Math.floor(Math.random() * total);
-    for (const item of bag.items) {
-      if (rand < item.qty) {
-        // Draw this item
-        bag.drawn.push({ id: nextItemId++, type: item.type,
-          value: item.type === 'color' ? { ...item.value } : item.value,
-          drawNum: ++drawCounter });
-        item.qty--;
-        if (item.qty <= 0) bag.items = bag.items.filter(x => x.id !== item.id);
-        break;
-      }
-      rand -= item.qty;
-    }
+  // Bag empty but items are drawn — no auto-refill, give a clear message
+  if (totalQty(bag) === 0 && !autoRefill) {
+    alert('The bag is empty! Hit Reset to return drawn items, or enable Auto-refill.');
+    return;
   }
+
+  let refilled = false;
+  let remaining = n;
+
+  while (remaining > 0) {
+    if (totalQty(bag) === 0) {
+      if (!autoRefill || bag.drawn.length === 0) break; // nothing left to refill from
+      doRefillBag(bag);
+      refilled = true;
+    }
+    drawOneFrom(bag);
+    remaining--;
+  }
+
   render();
+  if (refilled) showRefillFlash();
+}
+
+function showRefillFlash() {
+  document.querySelectorAll('.refill-flash').forEach(e => e.remove());
+  const controls = document.querySelector('.draw-controls');
+  if (!controls) return;
+  const flash = document.createElement('span');
+  flash.className = 'refill-flash';
+  flash.textContent = '↺ Bag refilled!';
+  controls.appendChild(flash);
+  setTimeout(() => flash.remove(), 2200);
+}
+
+function toggleAutoRefill() {
+  autoRefill = document.getElementById('auto-refill-toggle')?.checked ?? false;
+  saveState();
 }
 
 function resetBag(bagId) {
@@ -776,7 +961,10 @@ function renderMain() {
           <div class="item-chip">${chipHTML(item)}</div>
           <div class="qty-controls">
             <button class="qty-btn" onclick="decrementItem(${bag.id},${item.id})" title="Remove one">−</button>
-            <span class="qty-num">${item.qty}</span>
+            <input class="qty-input" type="number" min="1" max="999" value="${item.qty}"
+              onchange="setItemQty(${bag.id},${item.id},this.value)"
+              onkeydown="if(event.key==='Enter')this.blur()"
+              onclick="this.select()">
             <button class="qty-btn" onclick="incrementItem(${bag.id},${item.id})" title="Add one">+</button>
             <button class="del-btn" onclick="deleteItem(${bag.id},${item.id})" title="Delete all of this type">✕</button>
           </div>
@@ -876,6 +1064,11 @@ function renderMain() {
             ${bag.drawn.length > 0
               ? `<button class="btn btn-success" onclick="resetBag(${bag.id})" title="Return all drawn items to the bag">↩ Reset</button>`
               : ''}
+            <label class="toggle-wrap" title="If the bag runs out mid-draw, it is automatically refilled and drawing continues">
+              <input type="checkbox" id="auto-refill-toggle" ${autoRefill ? 'checked' : ''} onchange="toggleAutoRefill()">
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              Auto-refill
+            </label>
           </div>
 
           <div class="col-title">Drawn Items &mdash; ${bag.drawn.length}</div>
